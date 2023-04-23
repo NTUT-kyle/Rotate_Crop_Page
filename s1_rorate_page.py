@@ -133,7 +133,7 @@ def rotate_img(file_path, now_page) -> bool:
     return True
 
 if __name__ == '__main__':
-    target_path = './111598089_v' # !!! 目標資料夾 !!!
+    target_path = './your_target_dir' # !!! 目標資料夾 !!!
     result_path = 'rotated' # 存放資料夾
     if not os.path.exists(result_path):
         os.makedirs(result_path)
