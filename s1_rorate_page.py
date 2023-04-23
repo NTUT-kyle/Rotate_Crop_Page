@@ -1,0 +1,156 @@
+"""
+參考同學程式，旋轉稿紙角度
+
+by kyL
+"""
+
+import os
+import cv2
+import numpy as np
+from tqdm import tqdm
+
+def qrcode_finder(image):
+    """搜尋 QR Code 位置
+    
+    Keyword arguments: 
+        image -- 要搜尋的圖片
+    Return:
+        bbox -- QR Code 邊界
+        None -- 找不到 QR Code
+    """
+    qrcode = cv2.QRCodeDetector()
+    data, bbox, rectified = qrcode.detectAndDecode(image)
+    
+    if bbox is None: return None
+    return bbox
+    
+def boxSize(arr):
+    """獲取 bbox 的最大以及最小 X, Y
+    
+    Keyword arguments: 
+        arr -- bbox
+    Return: 
+        (min_x, min_y, max_x, max_y)
+    """
+    box_roll = np.rollaxis(arr, 1, 0)
+    xmax = int(np.amax(box_roll[0]))
+    xmin = int(np.amin(box_roll[0]))
+    ymax = int(np.amax(box_roll[1]))
+    ymin = int(np.amin(box_roll[1]))
+    return (xmin, ymin, xmax, ymax)
+    
+def get_skew_angle(qrcode_img) -> float:
+    """計算角度
+    
+    Keyword arguments:
+        qrcode_img -- 含有 qrcode 的圖片
+    Return:
+        angle -- 角度 float
+    """
+    
+    # cv2.imshow("test", qrcode_img)
+    # cv2.waitKey(0)
+    
+    gray = 255 - qrcode_img
+    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+
+    coords = np.column_stack(np.where(thresh > 0))
+    angle = cv2.minAreaRect(coords)[-1] # (0, 90]
+    
+    # print(angle, end=" ")
+        
+    if angle > 45:
+        angle = 90 - angle
+    else:
+        angle = -angle
+        
+    return angle
+
+def saveImage(image, now_page):
+    """儲存 png 至 ./rotated/ 底下
+    
+    Keyword arguments:
+        image -- 要存的圖片
+        now_page -- 頁面 index
+    """
+    global result_path
+    cv2.imwrite('./{}/{}.png'.format(result_path, now_page + 1), image)
+    
+
+def rotate_img(file_path, now_page) -> bool:
+    """主程式，以 QR Code 旋轉稿紙
+    
+    Keyword arguments:
+        file_path -- 檔案路徑
+        now_page -- 現在頁面 index
+    Return:
+        True -- 執行成功
+        False -- 錯誤
+    """
+    
+    # Read Image from path
+    img = cv2.imread(file_path)
+    height, width, _ = img.shape
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (9, 9), 0)
+    center_w = width // 2
+    center_h = height // 2
+    
+    # QRCode detector
+    right_bottom = blur[center_h : height, center_w : width]
+    IsRightBottom = True
+    bbox = qrcode_finder(right_bottom)
+    # if there is no qrcode in the right bottom corner
+    if bbox is None:
+        left_top = blur[0 : center_h, 0 : center_w]
+        bbox = qrcode_finder(left_top)
+        IsRightBottom = False
+    if bbox is None: return False
+    
+    # Calculate qrcode angle
+    box = boxSize(bbox[0])
+    scale = 30
+    angle = 0
+    # check if there is a qrcode in the right bottom corner
+    if IsRightBottom:
+        angle = get_skew_angle(gray[
+            box[1] + center_h - scale : box[3] + center_h + scale,
+            box[0] + center_w - scale : box[2] + center_w+ scale
+        ])
+    else:
+        angle = get_skew_angle(gray[
+            box[1] - scale : box[3] + scale,
+            box[0] - scale : box[2] + scale
+        ])
+    
+    # Rotate Image
+    M = cv2.getRotationMatrix2D((width // 2, height // 2), angle, 1.0)
+    rotated = cv2.warpAffine(img, M, (width, height), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+    
+    # Write Image
+    saveImage(rotated, now_page)
+    
+    return True
+
+if __name__ == '__main__':
+    target_path = './111598089_v' # !!! 目標資料夾 !!!
+    result_path = 'rotated' # 存放資料夾
+    if not os.path.exists(result_path):
+        os.makedirs(result_path)
+    
+    print("Handling page rotation...")
+    
+    errorList = []
+    allFileList = os.listdir(target_path)
+    for index in tqdm(range(len(allFileList))):
+        filePath = target_path + "/" + allFileList[index]
+        if not rotate_img(filePath, index):
+            errorList.append(allFileList[index])
+            
+    print("Rotate successfully")
+    
+    if len(errorList):
+        # 錯誤原因為 QR Code 無法偵測
+        print("The following is the wrong file, please rotate it yourself：")
+        for errPath in errorList:
+            print(errPath)
