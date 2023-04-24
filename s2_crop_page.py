@@ -6,7 +6,7 @@
 by kyL
 """
 
-from s1_rorate_page import qrcode_finder, boxSize
+from s1_rotate_page import qrcode_finder, boxSize
 
 import cv2
 import os, json
