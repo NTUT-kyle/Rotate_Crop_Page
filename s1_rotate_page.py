@@ -89,7 +89,11 @@ def rotate_img(file_path, now_page) -> bool:
     """
     
     # Read Image from path
-    img = cv2.imread(file_path)
+    try:
+        img = cv2.imread(file_path)
+    except:
+        print("\n 錯誤檔案：{}".format(now_page))
+        return False
     height, width, _ = img.shape
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (9, 9), 0)

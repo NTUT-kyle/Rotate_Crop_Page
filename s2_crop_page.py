@@ -144,7 +144,11 @@ def setPointImageFromPath(file_path, now_page) -> bool:
     """
     global success_count, v, errorWord
     
-    image = cv2.imread(file_path)
+    try:
+        image = cv2.imread(file_path)
+    except:
+        print("\n 錯誤檔案：{}".format(now_page))
+        return False
     h, w, _ = image.shape
 
     # 去除高低不需要的區塊(某些情況下會失誤，失誤原因可能是因為灰塵...)
@@ -154,7 +158,7 @@ def setPointImageFromPath(file_path, now_page) -> bool:
     image[bottom_h:, :] = 255
 
     # 以 HSV 獲取綠色區塊的 mask
-    lower_green = np.array([36, 90, 90]) # 綠色在 HSV 的範圍
+    lower_green = np.array([32, 90, 90]) # 綠色在 HSV 的範圍
     upper_green = np.array([70, 255, 255])
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_green, upper_green)
