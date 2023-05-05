@@ -71,8 +71,7 @@ pipenv install -r requirements.txt
 
 ### 切割錯誤
 
-如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著上方步驟修復
-可以先把`s2_crop_page.py`中`savePNG`method 的儲存檔案名稱加入`now_page`，就能夠查看 page 是哪一個！範例如下：
+如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著上方步驟修復，可以先把`s2_crop_page.py`中`savePNG` method 的儲存檔案名稱加入`now_page`，就能夠查看 page 是哪一個！範例如下：
 
 ```python
 # 位置在 s2_crop_page.py 的 L98
