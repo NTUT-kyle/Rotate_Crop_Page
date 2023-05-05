@@ -51,7 +51,7 @@ pipenv install -r requirements.txt
 
 如果已經轉正，再做以下步驟：
 
-1. 執行程式`python s2_crop_page.py`
+1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L239`自訂目標資料夾([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s2_crop_page.py#L239))
 2. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
 3. 再輸入切割到哪個 Page，如果是 `30` 至 `60`，則輸入 `60` (初始為`138`)
 4. 等待執行結束
