@@ -32,7 +32,7 @@ pipenv install -r requirements.txt
 
 環境安裝完成後，執行以下步驟：
 
-1. 先修改目標資料夾，改成你的稿紙圖片資料夾位置([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s1_rotate_page.py#L136))
+1. 先修改目標資料夾，改成你的稿紙圖片資料夾位置([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s1_rotate_page.py#L140))
 2. 執行程式`python s1_rotate_page.py`
 3. 等待執行完成
 4. 結果可以在`rotated`資料夾中看到
@@ -62,7 +62,30 @@ pipenv install -r requirements.txt
     - 如果還是錯誤的話，再從第二步開始！
 4. 回到第一步，繼續把其他錯誤檔案修復
 
+## 已知問題
+
+通常`s1_rotate_page.py`不會有太大的問題，但`s2_crop_page.py`就不一樣了！
+
+如果有更好的方法歡迎提出！
+
+### 切割錯誤
+
 如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著上方步驟修復
-可以先把`s2_crop_page.py`中`savePNG`method 的儲存檔案名稱加入`now_page`，就能夠查看 page 是哪一個！如果有更好的方法歡迎提出！
-    
+可以先把`s2_crop_page.py`中`savePNG`method 的儲存檔案名稱加入`now_page`，就能夠查看 page 是哪一個！範例如下：
+
+```python
+# 位置在 s2_crop_page.py 的 L98
+# 原程式碼
+cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + '.png', image)
+
+# 修改後的程式碼
+cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + f'_{now_page}.png', image)
+```
+
+### 單一字元錯誤
+
 如果發現單一字元，有切割錯誤的地方，可以自行使用任何工具切割，並命名為錯誤字元的檔名(U+XXXX)，最後再把錯誤的字元圖片覆蓋成新的。
+
+### 發生 Exception
+
+如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `L161` 的第一個參數看看)
