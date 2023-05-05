@@ -1,6 +1,7 @@
 # Rotate_Crop_Page
 
-For 字體課程 138 page 使用 (一部份參考同學程式)
+For 字體課程 138 page 使用 (一部份參考同學程式)  
+如果有任何問題可以開 Issue！
 
 ## 初始化專案
 
@@ -16,7 +17,7 @@ For 字體課程 138 page 使用 (一部份參考同學程式)
 pip install -r requirements.txt
 ```
 
--   使用 pipenv 安裝 (本機需要有 pipenv 套件)
+-   或使用 pipenv 安裝 (本機需要有 pipenv 套件)
 
 ```cmd
 # 建立虛擬環境
