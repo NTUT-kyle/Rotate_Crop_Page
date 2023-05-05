@@ -49,7 +49,7 @@ pipenv install -r requirements.txt
 
 ### 影像處理切割文字
 
-如果旋轉完成，在做以下步驟：
+如果已經轉正，再做以下步驟：
 
 1. 執行程式`python s2_crop_page.py`
 2. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
