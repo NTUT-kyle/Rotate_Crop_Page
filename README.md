@@ -30,9 +30,9 @@ pipenv install -r requirements.txt
 
 ### 校正旋轉 page
 
-環境安裝完成後，做以下步驟：
+環境安裝完成後，執行以下步驟：
 
-1. 先修改目標資料夾，改成你的稿紙圖片資料夾位置
+1. 先修改目標資料夾，改成你的稿紙圖片資料夾位置([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s1_rotate_page.py#L136))
 2. 執行程式`python s1_rotate_page.py`
 3. 等待執行完成
 4. 結果可以在`rotated`資料夾中看到
