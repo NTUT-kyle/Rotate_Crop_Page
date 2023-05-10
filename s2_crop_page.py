@@ -7,22 +7,25 @@ by kyL
 """
 
 from s1_rotate_page import qrcode_finder, boxSize
-
 import cv2
 import os, json
 import numpy as np
 from tqdm import tqdm
 
+from multiprocessing import Pool
+from threading import Thread
+import time
+
 def read_json(file):
     with open(file) as f:
         p = json.load(f)
-        v = ['']*13759
+        unicode = ['']*13759
         for i in range(13759):
             if (128 <= i & i < 256) or (0 <= i & i < 32): # 128 - 255: 'UNICODE' = '     '; 0 - 31: unable to print
-                v[i] = '123'
+                unicode[i] = '123'
             else:
-                v[i] = 'U+' + p['CP950'][i]['UNICODE'][2:6] # ex: 0x1234 --> U+1234
-        return v
+                unicode[i] = 'U+' + p['CP950'][i]['UNICODE'][2:6] # ex: 0x1234 --> U+1234
+        return unicode
 
 def twoPointDistance(p1, p2):
     """計算兩點之間的距離
@@ -35,15 +38,13 @@ def twoPointDistance(p1, p2):
     """
     p1 = np.array(p1)
     p2 = np.array(p2)
-    return abs(
-        np.sqrt(
-            np.sum(
-                np.power(p1 - p2, 2)
+    return  np.sqrt(
+                np.sum(
+                    np.power(p1 - p2, 2)
+                )
             )
-        )
-    )
 
-def getTLTRBLBR(mask):
+def getBoundingBox(mask):
     """獲取 mask 中左上、右上、左下、右下座標
     
     Keyword arguments:
@@ -65,37 +66,47 @@ def getTLTRBLBR(mask):
     # 獲取左上右上左下右下
     coords = np.argwhere(mask == 255)
     if len(coords) > 0:
-        for pixel in coords:
-            y, x = pixel
-            if y < result[0][1]:
-                result[0][1] = y
-            if x < result[0][0]:
-                result[0][0] = x
-            if y < result[1][1]:
-                result[1][1] = y
-            if x > result[1][0]:
-                result[1][0] = x
-            if y > result[2][1]:
-                result[2][1] = y
-            if x < result[2][0]:
-                result[2][0] = x
-            if y > result[3][1]:
-                result[3][1] = y
-            if x > result[3][0]:
-                result[3][0] = x
+        min_y, min_x = coords.min(axis=0)
+        max_y, max_x = coords.max(axis=0)
+
+        result[0][1] = min(min_y, result[0][1])
+        result[1][1] = min(min_y, result[1][1])
+        result[2][1] = max(max_y, result[2][1])
+        result[3][1] = max(max_y, result[3][1])
+        
+        result[0][0] = min(min_x, result[0][0])
+        result[2][0] = min(min_x, result[2][0])
+        result[1][0] = max(max_x, result[1][0])
+        result[3][0] = max(max_x, result[3][0])
     else:
         return None
     return result
 
-def savePNG(image, index, now_page):
+def savePNG(image, index, now_page, PAGE_START, PAGE_END, unicode):
     """儲存 png 至 /1_138/ 底下
     
     Keyword arguments:
         image -- 要存的圖片
         index -- 文字的 index
     """
-    global PAGE_START, PAGE_END, v
-    cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + '.png', image)
+    cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ unicode[index-1] + '.png', image)
+
+def getQRcode(gray, center_h, h, center_w, w, kernel_size=1):
+    """獲取QRcode位置
+    
+    Keyword arguments:
+        image -- 要存的照片
+        index -- 文字的 index
+    Return:
+        bounding box 四個角坐標
+    """
+    if kernel_size > 1:
+        gray = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
+    bbox = qrcode_finder(gray[center_h : h, center_w : w])
+
+    if bbox is None and kernel_size < 8:
+        return getQRcode(gray, center_h, h, center_w, w, kernel_size + 2)
+    return bbox
 
 def getTopBottomArea(image, w, h):
     """獲取上面與下面的多餘區域高度
@@ -111,9 +122,9 @@ def getTopBottomArea(image, w, h):
     
     # QRCode detector
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (9, 9), 0)
-    bbox = qrcode_finder(blur[center_h : h, center_w : w])
-    if bbox is None: return 0, 0
+    bbox = getQRcode(gray, center_h, h, center_w, w)
+    if bbox is None:
+        return 0, 0
     box = boxSize(bbox[0])
     
     # Calculate bottom area
@@ -132,7 +143,63 @@ def getTopBottomArea(image, w, h):
             break
     return top_high, bottom_high
 
-def setPointImageFromPath(file_path, now_page) -> bool:
+def outputFileListener(outputDir, total):
+    """用於顯示進度條
+    
+    Keyword arguments:
+        outputDir -- 輸出檔案路徑
+        total -- 估計輸出總字數數量
+    """
+    global PROCESS_END
+
+    pbar = tqdm(total=total)
+    while(not PROCESS_END):
+        pbar.n = len(os.listdir(outputDir))
+        pbar.refresh()
+        if pbar.n >= total:
+            break
+        time.sleep(0.5)
+
+def scaleAdjustment(word_img, adjustCentroid=True):
+    """調整文字大小、重心
+    
+    Keyword arguments:
+        word_img -- 文字圖片
+    """
+    # 把文字圖片建立在更大的空白區域上
+    word_img_copy = cv2.copyMakeBorder(word_img, 50, 50, 50, 50, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+    # 二值化處理
+    binary_word_img = cv2.cvtColor(word_img_copy, cv2.COLOR_BGR2GRAY)
+    binary_word_img = cv2.threshold(binary_word_img, 127, 255, cv2.THRESH_BINARY_INV)[1]
+    # 取得文字 Bounding Box
+    topLeftX, topLeftY, word_w, word_h = cv2.boundingRect(binary_word_img)
+
+    # 計算質心
+    cX, cY = topLeftX + word_w // 2, topLeftY + word_h // 2
+    if adjustCentroid:
+        moments = cv2.moments(binary_word_img)
+        if moments["m00"] != 0:
+            cX = int(moments["m10"] / moments["m00"])
+            cY = int(moments["m01"] / moments["m00"])
+
+    # 以質心作爲中心點，取得文字所在正方形區域
+    block_size_half = max(
+        abs(cX - topLeftX),
+        abs(topLeftX + word_w - cX),
+        abs(cY - topLeftY),
+        abs(topLeftY + word_h - cY)
+        ) + 10
+    h, w, _ = word_img_copy.shape
+    left_x = max(0, cX - block_size_half)
+    right_x = min(w, cX + block_size_half)
+    top_y = max(0, cY - block_size_half)
+    bot_y = min(h, cY + block_size_half)
+
+    finalWordImg = word_img_copy[top_y:bot_y, left_x:right_x]
+
+    return cv2.resize(finalWordImg, (300, 300), interpolation=cv2.INTER_AREA)
+
+def setPointImageFromPath(args) -> str:
     """主程式，用於辨識並切割稿紙
     
     Keyword arguments:
@@ -142,20 +209,15 @@ def setPointImageFromPath(file_path, now_page) -> bool:
         True -- 執行成功
         False -- 錯誤
     """
-    global success_count, v, errorWord
-    
+    file_path, now_page, PAGE_START, PAGE_END, unicode, adjustCentroid = args
+
     try:
         image = cv2.imread(file_path)
+        if image is None:
+            raise Exception
     except:
-        print("\n 錯誤檔案：{}".format(now_page))
-        return False
+        return f"LoadError: {now_page}"
     h, w, _ = image.shape
-
-    # 去除高低不需要的區塊(某些情況下會失誤，失誤原因可能是因為灰塵...)
-    top_h, bottom_h = getTopBottomArea(image, w, h)
-    if not (top_h and bottom_h): return False
-    image[0:top_h, :] = 255
-    image[bottom_h:, :] = 255
 
     # 以 HSV 獲取綠色區塊的 mask
     lower_green = np.array([32, 90, 90]) # 綠色在 HSV 的範圍
@@ -164,14 +226,15 @@ def setPointImageFromPath(file_path, now_page) -> bool:
     mask = cv2.inRange(hsv, lower_green, upper_green)
     
     # 對 mask 腐蝕去雜訊
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    AfterErode = cv2.erode(mask, kernel)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     
     # 獲取左上右上左下右下座標 (如果 mask 效果不好會錯誤)
-    result = getTLTRBLBR(AfterErode)
-    if result == None: return False
+    result = getBoundingBox(mask)
+    if result == None:
+        return f"GetGlobalMaskError: {now_page}"
 
-    # block 綠框大小，14.75 為現實寬度，210 為 A4 寬度
+    # block 綠框大小，14.75 為現實寬度，210 為 A4 寬度 (mm)
     block = 14.75 * w // 210
     # bet 左右綠框之間距離
     bet = (twoPointDistance((result[0][0], result[0][1]), (result[1][0], result[1][1])) - block * 10) / 9
@@ -190,39 +253,47 @@ def setPointImageFromPath(file_path, now_page) -> bool:
             index = 100 * (now_page - 1) + k + 10 * j + 1
             
             # 檢查 index
-            if index > len(v): 
+            if index > len(unicode): 
                 break
-            if v[index - 1] == '123':
-                errorWord.append(f'page {now_page} 的第 {j} 列第 {k} 個無法處理')
+            if unicode[index - 1] == '123': # skip (ignore character)
                 continue
             
             # calculate X coordinate 
             x1 = int(result[0][0] + k * (block + bet))
             x2 = int(x1 + block)
             
-            scale = 10
+            scale = 5
             # 獲取第 j 列第 k 個圖片
             word_img = image[y1 - scale:y2 + scale, x1 - scale:x2 + scale]
             
             # 定位綠框左上以及右下座標
             word_hsv = cv2.cvtColor(word_img, cv2.COLOR_BGR2HSV)
             word_mask = cv2.inRange(word_hsv, lower_green, upper_green)
-            word_result = getTLTRBLBR(word_mask)
-            if word_result != None and twoPointDistance(word_result[0], word_result[1]) - block < 10:
+            word_result = getBoundingBox(word_mask)
+            if word_result is not None and \
+                twoPointDistance(word_result[0], word_result[1]) - block < 10:
                 # 當綠框寬度與左上右上座標之間的距離相近，採用定位到的座標(準度較佳)
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, ksize=(3, 3))
+                dilateMask = cv2.dilate(word_mask, kernel, iterations=1)
+                word_img[dilateMask == 255] = 255
                 word_img = word_img[word_result[0][1] + scale: word_result[3][1] - scale, word_result[0][0] + scale: word_result[3][0] - scale]
             else:
                 # 採用計算得到的座標(準度較差)
                 scale += 20
                 word_img = image[y1 + scale:y2 - scale, x1 + scale:x2 - scale]
             
-            
             # 儲存圖片
-            savePNG(cv2.resize(word_img, (300, 300), interpolation=cv2.INTER_AREA), index, now_page)
-            success_count += 1
+            if index > 665 and index <= 13725:
+                #僅對中文字進行重心調整
+                finalWordImg = scaleAdjustment(word_img, adjustCentroid=adjustCentroid)
+                savePNG(finalWordImg,\
+                        index, now_page, PAGE_START, PAGE_END, unicode)
+            else:
+                savePNG(cv2.resize(word_img, (300, 300), interpolation=cv2.INTER_AREA),\
+                        index, now_page, PAGE_START, PAGE_END, unicode)
         last_y = y2 + 25
              
-    return True
+    return "Pass"
 
 if __name__ == '__main__':
     PAGE_START = input("Please enter the number of pages you want to start processing(default:1): ")
@@ -235,14 +306,20 @@ if __name__ == '__main__':
     
     PAGE_START = int(PAGE_START)
     PAGE_END = int(PAGE_END)
+    PROCESS_END = False
+    MULTIPROCESSING = True
+    ADJUST_CENTROID = True
     
     targetPath = './rotated' # !!! 目標資料夾 !!!
     im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
-    v = read_json('./CP950.json')
+    unicode = read_json('./CP950.json')
     
-    errorList = []
-    errorWord = []
-    success_count = 0
+    returnState = {
+        'LoadError':[],
+        'QrcodeNotFoundError':[],
+        'GetGlobalMaskError':[],
+        'Pass': 0
+        }
 
     if not os.path.exists(im_dir): # 創 png 這個資料夾
         os.makedirs(im_dir)
@@ -250,19 +327,54 @@ if __name__ == '__main__':
     else:
         print(f"Folders '{PAGE_START}_{PAGE_END}' have been created. ")
 
-    print(f"Processing page {PAGE_START}~{PAGE_END} files. ")
+    print(f"Processing page {PAGE_START}~{PAGE_END} files... ")
+
+    # 生成全部參數
+    filePaths = []
+    now_pages = []
+    for now_page in range(PAGE_START, PAGE_END + 1): # 因為 Python 的 range 最後一個數字沒有包括，所以這邊需要 + 1
+        filePaths.append(f'{targetPath}/page_{now_page}.png')
+        now_pages.append(now_page)
+    PAGE_STARTs = [PAGE_START] * len(filePaths)
+    PAGE_ENDs = [PAGE_END] * len(filePaths)
+    unicodes = [unicode] * len(filePaths)
+    adjustCentroids = [ADJUST_CENTROID] * len(filePaths)
+
+    # 監聽輸出資料夾，顯示進度條
+    start_unicode = (PAGE_START - 1) * 100
+    end_unicode = min(PAGE_END * 100, 13758)
+    total_available_code = len(unicode[start_unicode : end_unicode]) - unicode[start_unicode : end_unicode].count('123')
+    thread = Thread(target=outputFileListener, args=(im_dir, total_available_code))
+    thread.start()
     
-    for now_page in tqdm(range(PAGE_START, PAGE_END + 1)): # 因為 Python 的 range 最後一個數字沒有包括，所以這邊需要 + 1
-        filePath = f'{targetPath}/{now_page}.png'
-        if not setPointImageFromPath(filePath, now_page):
-            errorList.append(filePath)
+    # 執行主程式
+    t1 = time.time()
+    if MULTIPROCESSING:
+        with Pool(8) as p:
+            results = p.map(
+                setPointImageFromPath, zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids))
+    else:
+        results = []
+        for args in zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids):
+            results.append(setPointImageFromPath(args))
+    PROCESS_END = True
+    thread.join()
+    t2 = time.time()
     
-    print(f"The crop of page {PAGE_START}~{PAGE_END} has been completed")
-    print(f"  A total of {success_count} png files were processed")
-    print(f"  A total of {len(errorWord)} png files were not processed")
-    
-    if len(errorList):
-        # 錯誤原因為無法偵測綠色框線導致
-        print("The following is the wrong file, please fix it yourself：")
-        for errPath in errorList:
-            print(errPath)
+    # 分類回傳值
+    for result in results:
+        result = result.split(':')
+        if result[0] in returnState.keys():
+            if result[0] == 'Pass':
+                returnState[result[0]] += 1
+            else:
+                returnState[result[0]].append(result[1])
+
+    # 輸出執行結果
+    print(f"The crop of page {PAGE_START}~{PAGE_END} has been completed in {(t2-t1)/60:.2}mins")
+    print(f"  A total of {returnState['Pass']} png files were processed")
+
+    for key, value in returnState.items():
+        if key == 'Pass' or value == []:
+            continue
+        print(f"  {key}: {value}")

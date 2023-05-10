@@ -9,6 +9,35 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
+def zoom_qrcode_finder(image, qrcode, thresh=64):
+    """放大處理QRCode位置，二值化處理並搜尋 QR Code 位置
+    
+    Keyword arguments: 
+        image -- 要搜尋的圖片
+    Return:
+        bbox -- QR Code 邊界
+        None -- 找不到 QR Code
+    """
+    h, w = image.shape
+    crop_h = h // 3
+    crop_w = w // 3
+    scale_h = crop_h / h
+    scale_w = crop_w / w
+    crop_img = image[h - crop_h : h, w - crop_w : w]
+    zoom_img = cv2.resize(crop_img, (w, h))
+    zoom_img = cv2.threshold(zoom_img, thresh, 255, cv2.THRESH_BINARY)[1]
+    _, bbox, _ = qrcode.detectAndDecode(zoom_img)
+
+    if bbox is not None:
+        bbox[:, :, 0] = bbox[:, :, 0] * scale_w + w - crop_w
+        bbox[:, :, 1] = bbox[:, :, 1] * scale_h + h - crop_h
+        return bbox
+
+    elif thresh == 192:
+        return None
+    return zoom_qrcode_finder(image, qrcode, thresh + 64)
+
+
 def qrcode_finder(image):
     """搜尋 QR Code 位置
     
@@ -21,7 +50,8 @@ def qrcode_finder(image):
     qrcode = cv2.QRCodeDetector()
     data, bbox, rectified = qrcode.detectAndDecode(image)
     
-    if bbox is None: return None
+    if bbox is None:
+        return zoom_qrcode_finder(image, qrcode)
     return bbox
     
 def boxSize(arr):
