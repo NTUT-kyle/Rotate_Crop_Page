@@ -89,6 +89,7 @@ def savePNG(image, index, now_page, PAGE_START, PAGE_END, unicode):
         image -- 要存的圖片
         index -- 文字的 index
     """
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ unicode[index-1] + '.png', image)
 
 def getQRcode(gray, center_h, h, center_w, w, kernel_size=1):
@@ -209,7 +210,7 @@ def setPointImageFromPath(args) -> str:
         True -- 執行成功
         False -- 錯誤
     """
-    file_path, now_page, PAGE_START, PAGE_END, unicode, adjustCentroid = args
+    file_path, now_page, PAGE_START, PAGE_END, unicode, adjustCentroid, SCALE, show = args
 
     try:
         image = cv2.imread(file_path)
@@ -220,17 +221,44 @@ def setPointImageFromPath(args) -> str:
     h, w, _ = image.shape
 
     # 以 HSV 獲取綠色區塊的 mask
-    lower_green = np.array([32, 90, 90]) # 綠色在 HSV 的範圍
-    upper_green = np.array([70, 255, 255])
+    lower_green = np.array([25, 90, 90]) # 綠色在 HSV 的範圍
+    upper_green = np.array([90, 255, 255]) # 綠色到淺藍在 HSV 的範圍
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_green, upper_green)
     
-    # 對 mask 腐蝕去雜訊
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    # 對 mask 中值濾波去鹽雜訊
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    dilateMask = cv2.dilate(mask, kernel, iterations=5)
+    mask = cv2.medianBlur(mask, 5)
+    globalMask = np.zeros_like(mask)
+
+    # 獲取 mask 中的全部矩形
+    contours = cv2.findContours(dilateMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = contours[0] if len(contours) == 2 else contours[1]
+
+    # 過濾掉過小、過大或不屬於正方形的矩形
+    min_area = h * w * 0.0008
+    max_area = h * w * 0.028
+    border = 15
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > min_area and area < max_area:
+            rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(contour)
+
+            # 過濾掉非正方形的框
+            if (ratio := rect_w / rect_h) < 0.9 or ratio > 1.1:
+                continue
+
+            # 過濾掉框内的雜訊
+            dilateMask[rect_y + border:rect_y + rect_h - border, rect_x + border:rect_x + rect_w - border] = 0
+            globalMask[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w] = \
+                dilateMask[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w]
+    mask[globalMask == 255] = 255
+    if show:
+        cv2.imshow('Global Mask', cv2.resize(mask, (mask.shape[1] // 7, mask.shape[0] // 7)))
     
     # 獲取左上右上左下右下座標 (如果 mask 效果不好會錯誤)
-    result = getBoundingBox(mask)
+    result = getBoundingBox(globalMask)
     if result == None:
         return f"GetGlobalMaskError: {now_page}"
 
@@ -242,13 +270,11 @@ def setPointImageFromPath(args) -> str:
     mid = (twoPointDistance((result[0][0], result[0][1]), (result[2][0], result[2][1])) - block * 10) / 9
 
     # 處理此頁面的每個字
-    last_y = 0
     for j in range(10):
         # calculate Y coordinate 
         y1 = int(result[0][1] + j * (block + mid))
         y2 = int(y1 + block)
         
-        image[last_y:y1, :] = 255
         for k in range(10):  
             index = 100 * (now_page - 1) + k + 10 * j + 1
             
@@ -261,25 +287,24 @@ def setPointImageFromPath(args) -> str:
             # calculate X coordinate 
             x1 = int(result[0][0] + k * (block + bet))
             x2 = int(x1 + block)
+            if show:
+                cv2.rectangle(image, (x1 - SCALE, y1 - SCALE), (x2 + SCALE, y2 + SCALE), (0, 255, 0), 2)
+                cv2.imshow('Image', cv2.resize(image, (image.shape[1] // 7, image.shape[0] // 7)))
             
-            scale = 5
             # 獲取第 j 列第 k 個圖片
-            word_img = image[y1 - scale:y2 + scale, x1 - scale:x2 + scale]
+            word_img = image[y1 - SCALE:y2 + SCALE, x1 - SCALE:x2 + SCALE]
+            word_mask = mask[y1 - SCALE:y2 + SCALE, x1 - SCALE:x2 + SCALE]
             
             # 定位綠框左上以及右下座標
-            word_hsv = cv2.cvtColor(word_img, cv2.COLOR_BGR2HSV)
-            word_mask = cv2.inRange(word_hsv, lower_green, upper_green)
             word_result = getBoundingBox(word_mask)
             if word_result is not None and \
                 twoPointDistance(word_result[0], word_result[1]) - block < 10:
                 # 當綠框寬度與左上右上座標之間的距離相近，採用定位到的座標(準度較佳)
-                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, ksize=(3, 3))
-                dilateMask = cv2.dilate(word_mask, kernel, iterations=1)
-                word_img[dilateMask == 255] = 255
-                word_img = word_img[word_result[0][1] + scale: word_result[3][1] - scale, word_result[0][0] + scale: word_result[3][0] - scale]
+                word_img[word_mask == 255] = 255
+                word_img = word_img[word_result[0][1] + SCALE: word_result[3][1] - SCALE, word_result[0][0] + SCALE: word_result[3][0] - SCALE]
             else:
                 # 採用計算得到的座標(準度較差)
-                scale += 20
+                scale = SCALE + 20
                 word_img = image[y1 + scale:y2 - scale, x1 + scale:x2 - scale]
             
             # 儲存圖片
@@ -289,13 +314,21 @@ def setPointImageFromPath(args) -> str:
                 savePNG(finalWordImg,\
                         index, now_page, PAGE_START, PAGE_END, unicode)
             else:
+                if word_img.shape[0] == 0 or word_img.shape[1] == 0:
+                    return f'CropError: {now_page}, code_{str(unicode[index-1])}'
                 savePNG(cv2.resize(word_img, (300, 300), interpolation=cv2.INTER_AREA),\
                         index, now_page, PAGE_START, PAGE_END, unicode)
-        last_y = y2 + 25
+                
+        if show:
+            key = cv2.waitKey(1)
+            if key == 27:
+                cv2.destroyAllWindows()
+                exit()
              
     return "Pass"
 
 if __name__ == '__main__':
+    PROCESS_END = False # 勿改
     PAGE_START = input("Please enter the number of pages you want to start processing(default:1): ")
     if not PAGE_START.strip():
         PAGE_START = 1
@@ -306,9 +339,10 @@ if __name__ == '__main__':
     
     PAGE_START = int(PAGE_START)
     PAGE_END = int(PAGE_END)
-    PROCESS_END = False
-    MULTIPROCESSING = True
-    ADJUST_CENTROID = True
+    MULTIPROCESSING = True # 多進程，True不能顯示切割過程
+    ADJUST_CENTROID = True # 文字重心對齊
+    SHOW = True
+    SCALE = 5 # 電子檔設5，紙本設20
     
     targetPath = './rotated' # !!! 目標資料夾 !!!
     im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
@@ -318,6 +352,7 @@ if __name__ == '__main__':
         'LoadError':[],
         'QrcodeNotFoundError':[],
         'GetGlobalMaskError':[],
+        'CropError':[],
         'Pass': 0
         }
 
@@ -332,13 +367,15 @@ if __name__ == '__main__':
     # 生成全部參數
     filePaths = []
     now_pages = []
-    for now_page in range(PAGE_START, PAGE_END + 1): # 因為 Python 的 range 最後一個數字沒有包括，所以這邊需要 + 1
-        filePaths.append(f'{targetPath}/page_{now_page}.png')
+    for now_page in range(PAGE_START, PAGE_END + 1):
+        filePaths.append(f'{targetPath}/{now_page}.png')
         now_pages.append(now_page)
     PAGE_STARTs = [PAGE_START] * len(filePaths)
     PAGE_ENDs = [PAGE_END] * len(filePaths)
     unicodes = [unicode] * len(filePaths)
     adjustCentroids = [ADJUST_CENTROID] * len(filePaths)
+    shows = [SHOW if not MULTIPROCESSING else False] * len(filePaths)
+    scales = [SCALE] * len(filePaths)
 
     # 監聽輸出資料夾，顯示進度條
     start_unicode = (PAGE_START - 1) * 100
@@ -349,15 +386,19 @@ if __name__ == '__main__':
     
     # 執行主程式
     t1 = time.time()
-    if MULTIPROCESSING:
-        with Pool(8) as p:
-            results = p.map(
-                setPointImageFromPath, zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids))
-    else:
-        results = []
-        for args in zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids):
-            results.append(setPointImageFromPath(args))
-    PROCESS_END = True
+    try:
+        if MULTIPROCESSING:
+            with Pool(8) as p:
+                results = p.map(
+                    setPointImageFromPath,
+                    zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows)
+                    )
+        else:
+            results = []
+            for args in zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows):
+                results.append(setPointImageFromPath(args))
+    finally:
+        PROCESS_END = True
     thread.join()
     t2 = time.time()
     

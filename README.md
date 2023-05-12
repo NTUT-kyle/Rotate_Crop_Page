@@ -52,13 +52,14 @@ pipenv install -r requirements.txt
 
 如果已經轉正，再做以下步驟：
 
-1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L312`自訂目標資料夾([程式碼位置](https://github.com/hengweibin/Rotate_Crop_Page/blob/main/s2_crop_page.py#L312))
-2. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
-3. 再輸入切割到哪個 Page，如果是 `30` 至 `60`，則輸入 `60` (初始為`138`)
-4. 等待執行結束
-5. 結果會在`1_138`資料夾中看到(如果不是初始值，則是在你設定數字的資料夾中看到)
+1. 電子檔將 `SCALE(L345)` 設定爲**5**，手寫掃描檔設爲**20**
+2. 執行程式 `python s2_crop_page.py`，可以在 `s2_crop_page.py` 的 `targetPath(L347)` 自訂目標資料夾([程式碼位置](https://github.com/hengweibin/Rotate_Crop_Page/blob/main/s2_crop_page.py#L347))
+3. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
+4. 再輸入切割到哪個 Page，如果是 `30` 至 `60`，則輸入 `60` (初始為`138`)
+5. 等待執行結束
+6. 結果會在`1_138`資料夾中看到(如果不是初始值，則是在你設定數字的資料夾中看到)
 
-結束後，如果出現`Error`的話，照以下步驟修復：
+結束後，如果出現 `Error` 的話，照以下步驟修復：
 
 1. 找出出錯檔案後，複製到`目標資料夾`資料夾
 2. 使用各種工具把圖片強化色彩，或去除污漬已讓程式更好辨識
@@ -69,7 +70,7 @@ pipenv install -r requirements.txt
 
 ## 已知問題
 
-通常`s1_rotate_page.py`不會有太大的問題，但`s2_crop_page.py`就不一樣了！
+通常 `s1_rotate_page.py` 不會有太大的問題，但 `s2_crop_page.py` 就不一樣了！
 
 如果有更好的方法歡迎向kyl提出！
 
@@ -92,4 +93,4 @@ cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + f'_{now_page}.png', imag
 
 ### 發生 Exception
 
-如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `L223` 的第一個參數看看)
+如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `L224` 的第一個參數看看)
