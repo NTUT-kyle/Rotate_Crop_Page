@@ -1,6 +1,9 @@
 # Rotate_Crop_Page
 
-For 字體課程 138 page 使用 (一部份參考同學程式)  
+For 字體課程 138 page 使用 (一部份參考同學程式)
+
+本程式不包含字元校正，如果寫歪，並不會自動調整！！！(有興趣的可以研究怎麼調整，我懶不想動)
+
 如果有任何問題可以開 Issue！
 
 ## 初始化專案
@@ -33,7 +36,7 @@ pipenv install -r requirements.txt
 
 環境安裝完成後，執行以下步驟：
 
-1. 先修改目標資料夾，改成你的稿紙圖片資料夾位置([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s1_rotate_page.py#L140))
+1. 先修改目標資料夾，在`s1_rotate_page.py`中`L140`改成你的稿紙圖片資料夾位置([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s1_rotate_page.py#L140))
 2. 執行程式`python s1_rotate_page.py`
 3. 等待執行完成
 4. 結果可以在`rotated`資料夾中看到
@@ -46,9 +49,9 @@ pipenv install -r requirements.txt
 
 ### 影像處理切割文字
 
-如果旋轉完成，在做以下步驟：
+如果已經轉正，再做以下步驟：
 
-1. 執行程式`python s2_crop_page.py`
+1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L239`自訂目標資料夾([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s2_crop_page.py#L239))
 2. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
 3. 再輸入切割到哪個 Page，如果是 `30` 至 `60`，則輸入 `60` (初始為`138`)
 4. 等待執行結束
