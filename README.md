@@ -113,7 +113,7 @@ pipenv install -r requirements.txt
 
 如果沒有對齊就會分割錯誤，請多加注意！
 
-<img src="./example.png" width="800" title="選取範例圖片"/>
+<img src="./example.png" width="700" title="選取範例圖片"/>
 
 
 #### 去除污漬或強化色彩
