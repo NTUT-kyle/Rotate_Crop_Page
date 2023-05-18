@@ -110,8 +110,10 @@ pipenv install -r requirements.txt
 8. 完成後記得把所有分割後的字，複製並貼到自動分割後的資料夾`XXX_XXX`中(取代原先存在的)
 
 如果頁面編號打錯，分割後的檔名就會錯誤(正確要 Unicode 對應檔名)
+
 如果沒有對齊就會分割錯誤，請多加注意！
-![選取範例圖片](./example.png)
+
+<img src="./example.png" width="800" title="選取範例圖片"/>
 
 
 #### 去除污漬或強化色彩
