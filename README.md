@@ -56,7 +56,7 @@ pipenv install -r requirements.txt
 
 結束後，如果出現`The following is the wrong file`的話，照以下步驟修復：
 
-1. 找出出錯檔案後，複製到`rotated`資料夾
+1. 找出出錯檔案(可按照[這邊](https://github.com/NTUT-kyle/Rotate_Crop_Page#切割錯誤)來處理)後，複製到`rotated`資料夾
 2. 使用各種工具把圖片強化色彩，或去除污漬已讓程式更好辨識
 3. 再次執行程式，但開始以及結束 page 輸入錯誤檔案的名稱，如果錯誤檔案是`20.png`，則開始以及結束輸入`20`
     - 如果沒有錯誤的話`20_20`資料夾中的圖片就是最後結果(名稱會與錯誤檔案名稱相同)
@@ -71,16 +71,11 @@ pipenv install -r requirements.txt
 
 ### 切割錯誤
 
-如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著上方步驟修復，可以先把`s2_crop_page.py`中`savePNG` method 的儲存檔案名稱加入`now_page`，就能夠查看 page 是哪一個！範例如下：
+如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著上方步驟修復，可以使用`find_word_page.py`這支程式來找，步驟如下：
 
-```python
-# 位置在 s2_crop_page.py 的 L98
-# 原程式碼
-cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + '.png', image)
-
-# 修改後的程式碼
-cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + f'_{now_page}.png', image)
-```
+1. 在 console 中輸入`python ./find_word_page.py`並執行
+2. 輸入錯誤字的 Unicode，假設錯誤的字為`絕`，其 Unicode 為 `5584`(可以看檔名)，那這邊就輸入 `5584`
+3. 接下來程式就會幫你找字，會顯示`Found 5584 in page 35`，就代表字在第 35 個 Page，接下來就可以針對 Page 35 做修復或是手動切割等等。
 
 ### 單一字元錯誤
 
