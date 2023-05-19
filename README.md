@@ -6,6 +6,8 @@ For 字體課程 138 page 使用 (一部份參考同學程式)
 
 如果有任何問題請提出 Issue
 
+！ 感謝 [Heng Wei Bin](https://github.com/HengWeiBin) 幫忙提高程式碼品質，並提升準確度以及效能 ！
+
 ### Demo 影片
 ![img](./CropWord.gif)
 ## 初始化專案
