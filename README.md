@@ -37,7 +37,7 @@ pipenv install -r requirements.txt
 
 環境安裝完成後，執行以下步驟：
 
-1. 先修改目標資料夾，在`s1_rotate_page.py`中`L140`改成你的稿紙圖片資料夾位置([程式碼位置](https://github.com/hengweibin/Rotate_Crop_Page/blob/main/s1_rotate_page.py#L140))
+1. 先修改目標資料夾，在`s1_rotate_page.py`中`L140`改成你的稿紙圖片資料夾位置([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s1_rotate_page.py#L140))
 2. 執行程式`python s1_rotate_page.py`
 3. 等待執行完成
 4. 結果可以在`rotated`資料夾中看到
@@ -52,17 +52,24 @@ pipenv install -r requirements.txt
 
 如果已經轉正，再做以下步驟：
 
-1. 電子檔將 `SCALE(L345)` 設定爲**5**，手寫掃描檔設爲**20**
-2. 執行程式 `python s2_crop_page.py`，可以在 `s2_crop_page.py` 的 `targetPath(L347)` 自訂目標資料夾([程式碼位置](https://github.com/hengweibin/Rotate_Crop_Page/blob/main/s2_crop_page.py#L347))
-3. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
-4. 再輸入切割到哪個 Page，如果是 `30` 至 `60`，則輸入 `60` (初始為`138`)
-5. 等待執行結束
-6. 結果會在`1_138`資料夾中看到(如果不是初始值，則是在你設定數字的資料夾中看到)
+1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`304~309`修改參數
+```
+    - MULTIPROCESSING # 多進程，True不能顯示切割過程
+    - ADJUST_CENTROID # 文字重心對齊
+    - SHOW # 顯示切割過程
+    - SCALE # 電子檔設5，紙本設20
+    - COLOR_BOOST # 增加對比度，適用於紙本掃描較差的圖，但會嚴重影響效率
+    - targetPath # !!! 目標資料夾 !!!
+```
+2. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
+3. 再輸入切割到哪個 Page，如果是 `30` 至 `60`，則輸入 `60` (初始為`138`)
+4. 等待執行結束
+5. 結果會在`1_138`資料夾中看到(如果不是初始值，則是在你設定數字的資料夾中看到)
 
-結束後，如果出現 `Error` 的話，照以下步驟修復：
+結束後，如果出現`Error`的話，照以下步驟修復：
 
 1. 找出出錯檔案後，複製到`目標資料夾`資料夾
-2. 使用各種工具把圖片強化色彩，或去除污漬已讓程式更好辨識
+2. 可以嘗試修改COLOR_BOOST參數、調色或去除雜訊以讓程式更好辨識
 3. 再次執行程式，但開始以及結束 page 輸入錯誤檔案的名稱，如果錯誤檔案是`20.png`，則開始以及結束輸入`20`
     - 如果沒有錯誤的話`20_20`資料夾中的圖片就是最後結果(名稱會與錯誤檔案名稱相同)
     - 如果還是錯誤的話，再從第二步開始！
@@ -70,27 +77,10 @@ pipenv install -r requirements.txt
 
 ## 已知問題
 
-通常 `s1_rotate_page.py` 不會有太大的問題，但 `s2_crop_page.py` 就不一樣了！
+通常`s1_rotate_page.py`不會有太大的問題，但`s2_crop_page.py`就不一樣了！
 
 如果有更好的方法歡迎向kyl提出！
 
-### 切割錯誤
-
-如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著上方步驟修復，可以先把`s2_crop_page.py`中`savePNG` method 的儲存檔案名稱加入`now_page`，就能夠查看 page 是哪一個！範例如下：
-
-```python
-# 位置在 s2_crop_page.py 的 L98
-# 原程式碼
-cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + '.png', image)
-
-# 修改後的程式碼
-cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ v[index-1] + f'_{now_page}.png', image)
-```
-
-### 單一字元錯誤
-
-如果發現單一字元，有切割錯誤的地方，可以自行使用任何工具切割，並命名為錯誤字元的檔名(U+XXXX)，最後再把錯誤的字元圖片覆蓋成新的。
-
 ### 發生 Exception
 
-如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `L224` 的第一個參數看看)
+如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `contrast(L174), lower/upper_green(L180)` 參數看看)

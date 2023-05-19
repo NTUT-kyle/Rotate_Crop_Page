@@ -92,58 +92,6 @@ def savePNG(image, index, now_page, PAGE_START, PAGE_END, unicode):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ unicode[index-1] + '.png', image)
 
-def getQRcode(gray, center_h, h, center_w, w, kernel_size=1):
-    """獲取QRcode位置
-    
-    Keyword arguments:
-        image -- 要存的照片
-        index -- 文字的 index
-    Return:
-        bounding box 四個角坐標
-    """
-    if kernel_size > 1:
-        gray = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
-    bbox = qrcode_finder(gray[center_h : h, center_w : w])
-
-    if bbox is None and kernel_size < 8:
-        return getQRcode(gray, center_h, h, center_w, w, kernel_size + 2)
-    return bbox
-
-def getTopBottomArea(image, w, h):
-    """獲取上面與下面的多餘區域高度
-    
-    Keyword arguments:
-        image -- 要存的照片
-        index -- 文字的 index
-    Return:
-        上方的高度, 下方的高度
-    """
-    center_w = w // 2
-    center_h = h // 2
-    
-    # QRCode detector
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    bbox = getQRcode(gray, center_h, h, center_w, w)
-    if bbox is None:
-        return 0, 0
-    box = boxSize(bbox[0])
-    
-    # Calculate bottom area
-    bottom_high = center_h + box[1] - 15
-    
-    # Calculate top area
-    top_high = 0
-    findtop = False
-    for h_index in range(h):
-        # the number of pixels that are not white
-        pixel = np.sum(gray[h_index, :] != 255)
-        if pixel > 30:
-            findtop = True
-        elif findtop and pixel == 0:
-            top_high = h_index + 20
-            break
-    return top_high, bottom_high
-
 def outputFileListener(outputDir, total):
     """用於顯示進度條
     
@@ -210,20 +158,28 @@ def setPointImageFromPath(args) -> str:
         True -- 執行成功
         False -- 錯誤
     """
-    file_path, now_page, PAGE_START, PAGE_END, unicode, adjustCentroid, SCALE, show = args
+    file_path, now_page, PAGE_START, PAGE_END, unicode, adjustCentroid, SCALE, show, COLOR_BOOST = args
 
     try:
         image = cv2.imread(file_path)
+        show_image = image.copy()
         if image is None:
             raise Exception
     except:
         return f"LoadError: {now_page}"
     h, w, _ = image.shape
 
+    # Boost Contrast
+    if COLOR_BOOST:
+        contrast = 50
+        colorBoost = image * (contrast/127 + 1) - contrast # 轉換公式
+        colorBoost = np.clip(colorBoost, 0, 255)
+        colorBoost = np.uint8(colorBoost)
+
     # 以 HSV 獲取綠色區塊的 mask
-    lower_green = np.array([25, 90, 90]) # 綠色在 HSV 的範圍
-    upper_green = np.array([90, 255, 255]) # 綠色到淺藍在 HSV 的範圍
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower_green = np.array([20, 90, 90]) # 綠色在 HSV 的範圍
+    upper_green = np.array([95, 255, 255]) # 綠色到淺藍在 HSV 的範圍
+    hsv = cv2.cvtColor(colorBoost, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_green, upper_green)
     
     # 對 mask 中值濾波去鹽雜訊
@@ -254,8 +210,6 @@ def setPointImageFromPath(args) -> str:
             globalMask[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w] = \
                 dilateMask[rect_y:rect_y + rect_h, rect_x:rect_x + rect_w]
     mask[globalMask == 255] = 255
-    if show:
-        cv2.imshow('Global Mask', cv2.resize(mask, (mask.shape[1] // 7, mask.shape[0] // 7)))
     
     # 獲取左上右上左下右下座標 (如果 mask 效果不好會錯誤)
     result = getBoundingBox(globalMask)
@@ -268,6 +222,10 @@ def setPointImageFromPath(args) -> str:
     bet = (twoPointDistance((result[0][0], result[0][1]), (result[1][0], result[1][1])) - block * 10) / 9
     # mid 上下綠框之間距離
     mid = (twoPointDistance((result[0][0], result[0][1]), (result[2][0], result[2][1])) - block * 10) / 9
+
+    if show:
+        cv2.rectangle(show_image, (result[0][0], result[0][1]), (result[3][0], result[3][1]), (0, 0, 255), 5)
+        cv2.imshow('Global Mask', cv2.resize(mask, (mask.shape[1] // 8, mask.shape[0] // 8)))
 
     # 處理此頁面的每個字
     for j in range(10):
@@ -288,8 +246,12 @@ def setPointImageFromPath(args) -> str:
             x1 = int(result[0][0] + k * (block + bet))
             x2 = int(x1 + block)
             if show:
-                cv2.rectangle(image, (x1 - SCALE, y1 - SCALE), (x2 + SCALE, y2 + SCALE), (0, 255, 0), 2)
-                cv2.imshow('Image', cv2.resize(image, (image.shape[1] // 7, image.shape[0] // 7)))
+                cv2.rectangle(show_image, (x1 - SCALE, y1 - SCALE), (x2 + SCALE, y2 + SCALE), (255, 0, 0), 5)
+                cv2.imshow('Image',
+                           cv2.resize(show_image,
+                                      (show_image.shape[1] // 8, show_image.shape[0] // 8),
+                                      interpolation=cv2.INTER_AREA)
+                            )
             
             # 獲取第 j 列第 k 個圖片
             word_img = image[y1 - SCALE:y2 + SCALE, x1 - SCALE:x2 + SCALE]
@@ -343,8 +305,9 @@ if __name__ == '__main__':
     ADJUST_CENTROID = True # 文字重心對齊
     SHOW = True
     SCALE = 5 # 電子檔設5，紙本設20
-    
+    COLOR_BOOST = False # 增加對比度，適用於紙本掃描
     targetPath = './rotated' # !!! 目標資料夾 !!!
+    
     im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
     unicode = read_json('./CP950.json')
     
@@ -376,6 +339,7 @@ if __name__ == '__main__':
     adjustCentroids = [ADJUST_CENTROID] * len(filePaths)
     shows = [SHOW if not MULTIPROCESSING else False] * len(filePaths)
     scales = [SCALE] * len(filePaths)
+    COLOR_BOOSTs = [COLOR_BOOST] * len(filePaths)
 
     # 監聽輸出資料夾，顯示進度條
     start_unicode = (PAGE_START - 1) * 100
@@ -388,14 +352,14 @@ if __name__ == '__main__':
     t1 = time.time()
     try:
         if MULTIPROCESSING:
-            with Pool(8) as p:
+            with Pool(4) as p:
                 results = p.map(
                     setPointImageFromPath,
-                    zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows)
+                    zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows, COLOR_BOOSTs)
                     )
         else:
             results = []
-            for args in zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows):
+            for args in zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows, COLOR_BOOSTs):
                 results.append(setPointImageFromPath(args))
     finally:
         PROCESS_END = True
