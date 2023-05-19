@@ -52,7 +52,7 @@ pipenv install -r requirements.txt
 
 如果已經轉正，再做以下步驟：
 
-1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`304~309`修改參數
+1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L300~L305`修改參數
 ```
     - MULTIPROCESSING # 多進程，True不能顯示切割過程
     - ADJUST_CENTROID # 文字重心對齊
@@ -83,4 +83,4 @@ pipenv install -r requirements.txt
 
 ### 發生 Exception
 
-如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `contrast(L174), lower/upper_green(L180)` 參數看看)
+如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `contrast(L166), lower/upper_green(L173)` 參數看看)

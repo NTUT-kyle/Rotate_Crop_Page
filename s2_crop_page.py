@@ -6,7 +6,6 @@
 by kyL
 """
 
-from s1_rotate_page import qrcode_finder, boxSize
 import cv2
 import os, json
 import numpy as np
@@ -56,12 +55,10 @@ def getBoundingBox(mask):
     
     h, w = mask.shape
     
-    result = [
+    result = np.array([
         [w - 1, h - 1], # 左上
-        [0, h - 1],     # 右上
-        [w - 1, 0],     # 左下
         [0, 0]          # 右下
-    ]
+    ])
     
     # 獲取左上右上左下右下
     coords = np.argwhere(mask == 255)
@@ -70,14 +67,9 @@ def getBoundingBox(mask):
         max_y, max_x = coords.max(axis=0)
 
         result[0][1] = min(min_y, result[0][1])
-        result[1][1] = min(min_y, result[1][1])
-        result[2][1] = max(max_y, result[2][1])
-        result[3][1] = max(max_y, result[3][1])
-        
+        result[1][1] = max(max_y, result[1][1])
         result[0][0] = min(min_x, result[0][0])
-        result[2][0] = min(min_x, result[2][0])
         result[1][0] = max(max_x, result[1][0])
-        result[3][0] = max(max_x, result[3][0])
     else:
         return None
     return result
@@ -186,7 +178,7 @@ def setPointImageFromPath(args) -> str:
     # 對 mask 中值濾波去鹽雜訊
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
     dilateMask = cv2.dilate(mask, kernel, iterations=5)
-    mask = cv2.medianBlur(mask, 5)
+    mask = cv2.medianBlur(mask, 7)
     globalMask = np.zeros_like(mask)
 
     # 獲取 mask 中的全部矩形
@@ -202,8 +194,8 @@ def setPointImageFromPath(args) -> str:
         if area > min_area and area < max_area:
             rect_x, rect_y, rect_w, rect_h = cv2.boundingRect(contour)
 
-            # 過濾掉非正方形的框
-            if (ratio := rect_w / rect_h) < 0.9 or ratio > 1.1:
+            # 過濾掉非正方形以及QRCode的框
+            if (ratio := rect_w / rect_h) < 0.9 or ratio > 1.1 or rect_y + rect_h > h * 0.95:
                 continue
 
             # 過濾掉框内的雜訊
@@ -214,18 +206,21 @@ def setPointImageFromPath(args) -> str:
     
     # 獲取左上右上左下右下座標 (如果 mask 效果不好會錯誤)
     result = getBoundingBox(globalMask)
-    if result == None:
+    if result is None:
         return f"GetGlobalMaskError: {now_page}"
+    globalScale = SCALE // 2
+    result[0, :] += globalScale
+    result[1, :] -= globalScale
 
     # block 綠框大小，14.75 為現實寬度，210 為 A4 寬度 (mm)
     block = 14.75 * w // 210
     # bet 左右綠框之間距離
-    bet = (twoPointDistance((result[0][0], result[0][1]), (result[1][0], result[1][1])) - block * 10) / 9
+    bet = (twoPointDistance(result[0], (result[1][0], result[0][1])) - block * 10) / 9
     # mid 上下綠框之間距離
-    mid = (twoPointDistance((result[0][0], result[0][1]), (result[2][0], result[2][1])) - block * 10) / 9
+    mid = (twoPointDistance(result[0], (result[0][0], result[1][1])) - block * 10) / 9
 
     if show:
-        cv2.rectangle(show_image, (result[0][0], result[0][1]), (result[3][0], result[3][1]), (0, 0, 255), 5)
+        cv2.rectangle(show_image, (result[0][0], result[0][1]), (result[1][0], result[1][1]), (0, 0, 255), 5)
         cv2.imshow('Global Mask', cv2.resize(mask, (mask.shape[1] // 8, mask.shape[0] // 8)))
 
     # 處理此頁面的每個字
@@ -261,10 +256,10 @@ def setPointImageFromPath(args) -> str:
             # 定位綠框左上以及右下座標
             word_result = getBoundingBox(word_mask)
             if word_result is not None and \
-                twoPointDistance(word_result[0], word_result[1]) - block < 10:
+                twoPointDistance((word_result[0][0], word_result[0][1]), (word_result[1][0], word_result[0][1])) - block < 10:
                 # 當綠框寬度與左上右上座標之間的距離相近，採用定位到的座標(準度較佳)
                 word_img[word_mask == 255] = 255
-                word_img = word_img[word_result[0][1] + SCALE: word_result[3][1] - SCALE, word_result[0][0] + SCALE: word_result[3][0] - SCALE]
+                word_img = word_img[word_result[0][1] + SCALE: word_result[1][1] - SCALE, word_result[0][0] + SCALE: word_result[1][0] - SCALE]
             else:
                 # 採用計算得到的座標(準度較差)
                 scale = SCALE + 20
@@ -306,7 +301,7 @@ if __name__ == '__main__':
     ADJUST_CENTROID = True # 文字重心對齊
     SHOW = True
     SCALE = 20 # 電子檔設5，紙本設20
-    COLOR_BOOST = False # 增加對比度，適用於紙本掃描
+    COLOR_BOOST = True # 增加對比度，適用於紙本掃描, 但會影響速度
     targetPath = './rotated' # !!! 目標資料夾 !!!
 
     im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
