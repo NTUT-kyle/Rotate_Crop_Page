@@ -256,7 +256,7 @@ def setPointImageFromPath(args) -> str:
             # 定位綠框左上以及右下座標
             word_result = getBoundingBox(word_mask)
             if word_result is not None and \
-                twoPointDistance((word_result[0][0], word_result[0][1]), (word_result[1][0], word_result[0][1])) - block < 10:
+                twoPointDistance(word_result[0], (word_result[1][0], word_result[0][1])) - block < 10:
                 # 當綠框寬度與左上右上座標之間的距離相近，採用定位到的座標(準度較佳)
                 word_img[word_mask == 255] = 255
                 word_img = word_img[word_result[0][1] + SCALE: word_result[1][1] - SCALE, word_result[0][0] + SCALE: word_result[1][0] - SCALE]
@@ -285,28 +285,7 @@ def setPointImageFromPath(args) -> str:
              
     return "Pass"
 
-if __name__ == '__main__':
-    PROCESS_END = False # 勿改
-    PAGE_START = input("Please enter the number of pages you want to start processing(default:1): ")
-    if not PAGE_START.strip():
-        PAGE_START = 1
-
-    PAGE_END = input("Please enter the number of pages you want to end processing(default:138): ")
-    if not PAGE_END.strip():
-        PAGE_END = 138
-    
-    PAGE_START = int(PAGE_START)
-    PAGE_END = int(PAGE_END)
-    MULTIPROCESSING = True # 多進程，True不能顯示切割過程
-    ADJUST_CENTROID = True # 文字重心對齊
-    SHOW = True
-    SCALE = 20 # 電子檔設5，紙本設20
-    COLOR_BOOST = True # 增加對比度，適用於紙本掃描, 但會影響速度
-    targetPath = './rotated' # !!! 目標資料夾 !!!
-
-    im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
-    unicode = read_json('./CP950.json')
-    
+def outputResult(PAGE_START, PAGE_END, results, time):
     returnState = {
         'LoadError':[],
         'QrcodeNotFoundError':[],
@@ -314,13 +293,45 @@ if __name__ == '__main__':
         'CropError':[],
         'Pass': 0
         }
+    
+    # 分類回傳值
+    for result in results:
+        result = result.split(':')
+        if result[0] in returnState.keys():
+            if result[0] == 'Pass':
+                returnState[result[0]] += 1
+            else:
+                returnState[result[0]].append(result[1])
+
+    # 輸出執行結果
+    print(f"The crop of page {PAGE_START}~{PAGE_END} has been completed in {time / 60:.2}mins")
+    print(f"  A total of {returnState['Pass']} png files were processed")
+
+    for key, value in returnState.items():
+        if key == 'Pass' or value == []:
+            continue
+        print(f"  {key}: {value}")
+
+def main():
+    global PROCESS_END
+
+    PAGE_START = input("Please enter the number of pages you want to start processing(default:1): ")
+    if not PAGE_START.strip():
+        PAGE_START = 1
+    PAGE_END = input("Please enter the number of pages you want to end processing(default:138): ")
+    if not PAGE_END.strip():
+        PAGE_END = 138
+    PAGE_START = int(PAGE_START)
+    PAGE_END = int(PAGE_END)
+
+    im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
+    unicode = read_json('./CP950.json')
 
     if not os.path.exists(im_dir): # 創 png 這個資料夾
         os.makedirs(im_dir)
         print(f"Created folders '{PAGE_START}_{PAGE_END}'. ")
     else:
         print(f"Folders '{PAGE_START}_{PAGE_END}' have been created. ")
-
     print(f"Processing page {PAGE_START}~{PAGE_END} files... ")
 
     # 生成全部參數
@@ -362,20 +373,15 @@ if __name__ == '__main__':
     thread.join()
     t2 = time.time()
     
-    # 分類回傳值
-    for result in results:
-        result = result.split(':')
-        if result[0] in returnState.keys():
-            if result[0] == 'Pass':
-                returnState[result[0]] += 1
-            else:
-                returnState[result[0]].append(result[1])
+    outputResult(PAGE_START, PAGE_END, results, t2 - t1)
 
-    # 輸出執行結果
-    print(f"The crop of page {PAGE_START}~{PAGE_END} has been completed in {(t2-t1)/60:.2}mins")
-    print(f"  A total of {returnState['Pass']} png files were processed")
+if __name__ == '__main__':
+    PROCESS_END = False # 勿改
+    MULTIPROCESSING = True # 多進程，True不能顯示切割過程，無法中途停下
+    ADJUST_CENTROID = True # 文字重心對齊
+    SHOW = True
+    SCALE = 20 # 電子檔設5，紙本設20
+    COLOR_BOOST = True # 增加對比度，適用於紙本掃描, 但會影響速度
+    targetPath = './rotated' # !!! 目標資料夾 !!!
 
-    for key, value in returnState.items():
-        if key == 'Pass' or value == []:
-            continue
-        print(f"  {key}: {value}")
+    main()
