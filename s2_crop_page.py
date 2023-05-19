@@ -379,7 +379,7 @@ if __name__ == '__main__':
     PROCESS_END = False # 勿改
     MULTIPROCESSING = True # 多進程，True不能顯示切割過程，無法中途停下
     ADJUST_CENTROID = True # 文字重心對齊
-    SHOW = True
+    SHOW = False # 顯示切割過程
     SCALE = 20 # 電子檔設5，紙本設20
     COLOR_BOOST = True # 增加對比度，適用於紙本掃描, 但會影響速度
     targetPath = './rotated' # !!! 目標資料夾 !!!
