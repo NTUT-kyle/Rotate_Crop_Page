@@ -175,11 +175,12 @@ def setPointImageFromPath(args) -> str:
         colorBoost = image * (contrast/127 + 1) - contrast # 轉換公式
         colorBoost = np.clip(colorBoost, 0, 255)
         colorBoost = np.uint8(colorBoost)
+        image = colorBoost
 
     # 以 HSV 獲取綠色區塊的 mask
     lower_green = np.array([20, 90, 90]) # 綠色在 HSV 的範圍
     upper_green = np.array([95, 255, 255]) # 綠色到淺藍在 HSV 的範圍
-    hsv = cv2.cvtColor(colorBoost, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, lower_green, upper_green)
     
     # 對 mask 中值濾波去鹽雜訊
@@ -304,10 +305,10 @@ if __name__ == '__main__':
     MULTIPROCESSING = True # 多進程，True不能顯示切割過程
     ADJUST_CENTROID = True # 文字重心對齊
     SHOW = True
-    SCALE = 5 # 電子檔設5，紙本設20
+    SCALE = 20 # 電子檔設5，紙本設20
     COLOR_BOOST = False # 增加對比度，適用於紙本掃描
     targetPath = './rotated' # !!! 目標資料夾 !!!
-    
+
     im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
     unicode = read_json('./CP950.json')
     
