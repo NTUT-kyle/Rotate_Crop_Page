@@ -2,10 +2,12 @@
 
 For 字體課程 138 page 使用 (一部份參考同學程式)
 
-本程式不包含字元校正，如果寫歪，並不會自動調整！！！(有興趣的可以研究怎麼調整，我懶不想動)
+本程式會自動進行質心置中，並縮放到同樣大小。
 
-如果有任何問題可以開 Issue！
+如果有任何問題請提出 Issue
 
+### Demo 影片
+![img](./CropWord.gif)
 ## 初始化專案
 
 ### 環境 Environment
@@ -51,7 +53,15 @@ pipenv install -r requirements.txt
 
 如果已經轉正，再做以下步驟：
 
-1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L239`自訂目標資料夾([程式碼位置](https://github.com/NTUT-kyle/Rotate_Crop_Page/blob/main/s2_crop_page.py#L239))
+1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L379~L385`修改參數
+```
+    - MULTIPROCESSING # 多進程，True不能顯示切割過程，無法中途停下
+    - ADJUST_CENTROID # 文字重心對齊
+    - SHOW # 顯示切割過程
+    - SCALE # 電子檔設5，紙本設20
+    - COLOR_BOOST # 增加對比度，適用於紙本掃描較差的圖，但會嚴重影響效率
+    - targetPath # !!! 目標資料夾 !!!
+```
 2. 先輸入你要從哪個 Page 開始切割，如果是從 `30` 開始的話，就輸出 `30`(初始為 `1`)
 3. 再輸入切割到哪個 Page，如果是 `30` 至 `60`，則輸入 `60` (初始為`138`)
 4. 等待執行結束
@@ -74,7 +84,8 @@ pipenv install -r requirements.txt
 
 #### 字切割錯誤
 
-如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著下方的`手動切割`的解決方法來解決
+- 可以嘗試修改COLOR_BOOST參數、調色或去除雜訊以讓程式更好辨識
+- 如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著下方的`手動切割`的解決方法來解決
 
 #### 單一字元錯誤
 
@@ -82,7 +93,7 @@ pipenv install -r requirements.txt
 
 #### 發生 Exception
 
-如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `L161` 的第一個參數看看)
+如果發生 `Exception`，可以把錯誤訊息以及學號發 `Issue`，以便修復！(問題可能出在綠色 HSV 範圍上，因為掃描機掃出來的色彩並不是那麼 OK，所以範圍會因 Page 而異，可以調整 `contrast(L166), lower/upper_green(L173)` 參數看看)
 
 ### 解決方法
 #### 找出字的頁面編號
