@@ -7,6 +7,8 @@ For 字體課程 138 page 使用 (一部份參考同學程式)
 
 如果有任何問題請找[NTUT-kyle](https://github.com/NTUT-kyle)！
 
+### Demo 影片
+![img](./CropWord.gif)
 ## 初始化專案
 
 ### 環境 Environment
@@ -52,9 +54,9 @@ pipenv install -r requirements.txt
 
 如果已經轉正，再做以下步驟：
 
-1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L300~L305`修改參數
+1. 執行程式`python s2_crop_page.py`，可以在`s2_crop_page.py`的`L379~L385`修改參數
 ```
-    - MULTIPROCESSING # 多進程，True不能顯示切割過程
+    - MULTIPROCESSING # 多進程，True不能顯示切割過程，無法中途停下
     - ADJUST_CENTROID # 文字重心對齊
     - SHOW # 顯示切割過程
     - SCALE # 電子檔設5，紙本設20
