@@ -9,7 +9,7 @@ For 字體課程 138 page 使用 (一部份參考同學程式)
 ！ 感謝 [Heng Wei Bin](https://github.com/HengWeiBin) 幫忙提高程式碼品質，並提升準確度以及效能 ！
 
 ### Demo 影片
-![img](./CropWord.gif)
+![Demo example](./ReadMeImage/CropWord.gif)
 ## 初始化專案
 
 ### 環境 Environment
@@ -126,7 +126,7 @@ pipenv install -r requirements.txt
 
 如果沒有對齊就會分割錯誤，請多加注意！
 
-<img src="./example.png" width="700" title="選取範例圖片"/>
+<img src="./ReadMeImage/example.png" width="700" title="選取範例圖片"/>
 
 
 #### 去除污漬或強化色彩
