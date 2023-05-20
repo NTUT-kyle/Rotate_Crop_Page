@@ -82,8 +82,8 @@ class ImagePage(object):
         
     def crop_image_from_box(self):
         errorWord = []
-        lower_green = np.array([32, 90, 90]) # 綠色在 HSV 的範圍
-        upper_green = np.array([70, 255, 255])
+        lower_green = np.array([20, 90, 90]) # 綠色在 HSV 的範圍
+        upper_green = np.array([95, 255, 255]) # 綠色到淺藍在 HSV 的範圍
         
         # block 綠框大小，14.75 為現實寬度，210 為 A4 寬度
         block = 14.75 * self.w // 210
