@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 
-from s2_crop_page import read_json, twoPointDistance, getTLTRBLBR
+from s2_crop_page import read_json, twoPointDistance, getBoundingBox
 
 class ImagePage(object):
     def __init__(self, v, now_page, resize_scale):
@@ -119,10 +119,12 @@ class ImagePage(object):
                 # 定位綠框左上以及右下座標
                 word_hsv = cv2.cvtColor(word_img, cv2.COLOR_BGR2HSV)
                 word_mask = cv2.inRange(word_hsv, lower_green, upper_green)
-                word_result = getTLTRBLBR(word_mask)
-                if word_result != None and twoPointDistance(word_result[0], word_result[1]) - block < 10:
+                word_result = getBoundingBox(word_mask)
+                if word_result is not None and \
+                    twoPointDistance(word_result[0], (word_result[1][0], word_result[0][1])) - block < 10:
                     # 當綠框寬度與左上右上座標之間的距離相近，採用定位到的座標(準度較佳)
-                    word_img = word_img[word_result[0][1] + scale: word_result[3][1] - scale, word_result[0][0] + scale: word_result[3][0] - scale]
+                    word_img[word_mask == 255] = 255
+                    word_img = word_img[word_result[0][1] + scale: word_result[1][1] - scale, word_result[0][0] + scale: word_result[1][0] - scale]
                 else:
                     # 採用計算得到的座標(準度較差)
                     scale += 20
