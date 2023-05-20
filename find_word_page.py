@@ -1,15 +1,6 @@
 import json, re
 
-def read_json(file:str) -> list:
-    with open(file) as f:
-        p = json.load(f)
-        v = ['']*13759
-        for i in range(13759):
-            if (128 <= i & i < 256) or (0 <= i & i < 32): # 128 - 255: 'UNICODE' = '     '; 0 - 31: unable to print
-                v[i] = '123'
-            else:
-                v[i] = '\\u' + p['CP950'][i]['UNICODE'][2:6] # ex: 0x1234 --> \\u1234
-        return v
+from s2_crop_page import read_json
 
 def find_page(v:list, code:str) -> int:
     for i, code_text in enumerate(v):
