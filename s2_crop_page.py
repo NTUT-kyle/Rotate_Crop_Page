@@ -44,12 +44,12 @@ def twoPointDistance(p1, p2):
             )
 
 def getBoundingBox(mask):
-    """獲取 mask 中左上、右上、左下、右下座標
+    """獲取 mask 中左上、右下座標
     
     Keyword arguments:
         mask -- 照片遮罩
     Return:
-        list -- [左上, 右上, 左下, 右下]
+        list -- [左上, 右下]
         None -- 圖片 mask 無效
     """
     
