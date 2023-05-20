@@ -3,8 +3,17 @@ import json, re
 from s2_crop_page import read_json
 
 def find_page(v:list, code:str) -> int:
+    """從 List 中尋找指定字元
+
+    Keyword arguments:
+        v (list): Character Unicode list
+        code (str): Character Unicode
+
+    Returns:
+        Page number
+    """
     for i, code_text in enumerate(v):
-        if code_text == f'\\u{code}':
+        if code_text == f'U+{code}':
             return i // 100 + 1
     return 0
 
