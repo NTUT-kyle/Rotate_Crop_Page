@@ -80,14 +80,12 @@ pipenv install -r requirements.txt
 
 ### 已知問題
 
-#### The following is the wrong file
+#### The following is the wrong file & 字切割錯誤
 
 如果發現`s2_crop_page.py`輸出`The following is the wrong file`的話，可以先試試
 
-#### 字切割錯誤
-
-- 可以嘗試修改COLOR_BOOST參數、調色或去除雜訊以讓程式更好辨識
-- 如果發現結果中，有切割錯誤的地方，請找到錯誤的 Page 並照著下方的`手動切割`的解決方法來解決
+- 修改COLOR_BOOST參數、調色或去除雜訊以讓程式更好辨識
+- 如果發現結果中，還是有切割錯誤的地方，請找到錯誤的 Page (下方的`找出字的頁面編號`)並照著下方的`手動切割`的解決方法來解決
 
 #### 單一字元錯誤
 
