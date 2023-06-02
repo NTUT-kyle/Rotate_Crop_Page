@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 
-from s2_crop_page import read_json, twoPointDistance, getBoundingBox
+from s2_crop_page import read_json, twoPointDistance, getBoundingBox, scaleAdjustment
 
 class ImagePage(object):
     def __init__(self, v, now_page, resize_scale):
@@ -23,6 +23,14 @@ class ImagePage(object):
         try:
             self.image = cv2.imread(path)
             self.h, self.w, _ = self.image.shape
+            
+            # Boost Contrast
+            contrast = 50
+            colorBoost = self.image * (contrast / 127 + 1) - contrast # 轉換公式
+            colorBoost = np.clip(colorBoost, 0, 255)
+            self.image = np.uint8(colorBoost)
+            
+            # resize image for manual cutting
             self.resize_image = cv2.resize(
                 self.image,
                 (self.w // self.resize_scale, self.h // self.resize_scale)
@@ -129,9 +137,16 @@ class ImagePage(object):
                     # 採用計算得到的座標(準度較差)
                     scale += 20
                     word_img = image[y1 + scale:y2 - scale, x1 + scale:x2 - scale]
-                    
+                
                 # 儲存圖片
-                self.save_word_image(cv2.resize(word_img, (300, 300), interpolation=cv2.INTER_AREA), index)
+                if index > 665 and index <= 13725:
+                    #僅對中文字進行重心調整
+                    finalWordImg = scaleAdjustment(word_img)
+                    self.save_word_image(finalWordImg, index)
+                else:
+                    if word_img.shape[0] == 0 or word_img.shape[1] == 0:
+                        return f'CropError: code_{str(unicode[index-1])}'
+                    self.save_word_image(cv2.resize(word_img, (300, 300), interpolation=cv2.INTER_AREA), index)
         return errorWord
         
     def save_word_image(self, word_image, index):
