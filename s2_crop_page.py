@@ -144,8 +144,9 @@ def setPointImageFromPath(args) -> str:
     """主程式，用於辨識並切割稿紙
     
     Keyword arguments:
-        file_path -- 檔案路徑
-        now_page -- 現在的 Page index
+        args -- 參數(
+            檔案路徑、現在頁數、開始頁數、結束頁數、文字 Unicode、
+            調整質心、尺度大小、是否顯示過程、對比度)
     Return:
         True -- 執行成功
         False -- 錯誤
