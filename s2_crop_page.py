@@ -15,6 +15,19 @@ from multiprocessing import Pool
 from threading import Thread
 import time
 
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Step 1 rotate scan page')
+    
+    parser.add_argument('--id',
+                        help='To rotated student id',
+                        default="111C52032",
+                        type=str)
+
+    args = parser.parse_args()
+    return args
+
 def read_json(file):
     with open(file) as f:
         p = json.load(f)
@@ -74,7 +87,7 @@ def getBoundingBox(mask):
         return None
     return result
 
-def savePNG(image, index, now_page, PAGE_START, PAGE_END, unicode):
+def savePNG(image, index, now_page, IM_DIR, unicode):
     """儲存 png 至 /1_138/ 底下
     
     Keyword arguments:
@@ -82,7 +95,7 @@ def savePNG(image, index, now_page, PAGE_START, PAGE_END, unicode):
         index -- 文字的 index
     """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    cv2.imwrite(f'./{PAGE_START}_{PAGE_END}/'+ unicode[index-1] + '.png', image)
+    cv2.imwrite(f'./{IM_DIR}/'+ unicode[index-1] + '.png', image)
 
 def outputFileListener(outputDir, total):
     """用於顯示進度條
@@ -150,7 +163,7 @@ def setPointImageFromPath(args) -> str:
         True -- 執行成功
         False -- 錯誤
     """
-    file_path, now_page, PAGE_START, PAGE_END, unicode, adjustCentroid, SCALE, show, COLOR_BOOST = args
+    file_path, now_page, IM_DIR, unicode, adjustCentroid, SCALE, show, COLOR_BOOST = args
 
     try:
         image = cv2.imread(file_path)
@@ -270,12 +283,12 @@ def setPointImageFromPath(args) -> str:
                 #僅對中文字進行重心調整
                 finalWordImg = scaleAdjustment(word_img, adjustCentroid=adjustCentroid)
                 savePNG(finalWordImg,\
-                        index, now_page, PAGE_START, PAGE_END, unicode)
+                        index, now_page, IM_DIR, unicode)
             else:
                 if word_img.shape[0] == 0 or word_img.shape[1] == 0:
                     return f'CropError: {now_page}, code_{str(unicode[index-1])}'
                 savePNG(cv2.resize(word_img, (300, 300), interpolation=cv2.INTER_AREA),\
-                        index, now_page, PAGE_START, PAGE_END, unicode)
+                        index, now_page, IM_DIR, unicode)
                 
         if show:
             key = cv2.waitKey(1)
@@ -312,7 +325,7 @@ def outputResult(PAGE_START, PAGE_END, results, time):
             continue
         print(f"  {key}: {value}")
 
-def main():
+def main(args):
     global PROCESS_END
 
     PAGE_START = input("Please enter the number of pages you want to start processing(default:1): ")
@@ -324,14 +337,14 @@ def main():
     PAGE_START = int(PAGE_START)
     PAGE_END = int(PAGE_END)
 
-    im_dir = f'./{PAGE_START}_{PAGE_END}' # 存放資料夾
+    im_dir = f'./{PAGE_START}_{PAGE_END}_{args.id}' # 存放資料夾
     unicode = read_json('./CP950.json')
 
     if not os.path.exists(im_dir): # 創 png 這個資料夾
         os.makedirs(im_dir)
-        print(f"Created folders '{PAGE_START}_{PAGE_END}'. ")
+        print(f"Created folders '{im_dir}'. ")
     else:
-        print(f"Folders '{PAGE_START}_{PAGE_END}' have been created. ")
+        print(f"Folders '{im_dir}' exist. ")
     print(f"Processing page {PAGE_START}~{PAGE_END} files... ")
 
     # 生成全部參數
@@ -340,15 +353,14 @@ def main():
     for now_page in range(PAGE_START, PAGE_END + 1):
         filePaths.append(f'{targetPath}/{now_page}.png')
         now_pages.append(now_page)
-    PAGE_STARTs = [PAGE_START] * len(filePaths)
-    PAGE_ENDs = [PAGE_END] * len(filePaths)
+    IM_DIRS = [im_dir] * len(filePaths)
     unicodes = [unicode] * len(filePaths)
     adjustCentroids = [ADJUST_CENTROID] * len(filePaths)
     shows = [SHOW if not MULTIPROCESSING else False] * len(filePaths)
     scales = [SCALE] * len(filePaths)
     COLOR_BOOSTs = [COLOR_BOOST] * len(filePaths)
 
-    # 監聽輸出資料夾，顯示進度條
+    # 監聽輸出資-料夾，顯示進度條
     start_unicode = (PAGE_START - 1) * 100
     end_unicode = min(PAGE_END * 100, 13758)
     total_available_code = len(unicode[start_unicode : end_unicode]) - unicode[start_unicode : end_unicode].count('123')
@@ -362,11 +374,11 @@ def main():
             with Pool(4) as p:
                 results = p.map(
                     setPointImageFromPath,
-                    zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows, COLOR_BOOSTs)
+                    zip(filePaths, now_pages, IM_DIRS, unicodes, adjustCentroids, scales, shows, COLOR_BOOSTs)
                     )
         else:
             results = []
-            for args in zip(filePaths, now_pages, PAGE_STARTs, PAGE_ENDs, unicodes, adjustCentroids, scales, shows, COLOR_BOOSTs):
+            for args in zip(filePaths, now_pages, IM_DIRS, unicodes, adjustCentroids, scales, shows, COLOR_BOOSTs):
                 results.append(setPointImageFromPath(args))
     finally:
         PROCESS_END = True
@@ -382,6 +394,10 @@ if __name__ == '__main__':
     SHOW = False # 顯示切割過程
     SCALE = 20 # 電子檔設5，紙本設20
     COLOR_BOOST = True # 增加對比度，適用於紙本掃描, 但會影響速度
-    targetPath = './rotated' # !!! 目標資料夾 !!!
 
-    main()
+    args = parse_args()
+    student_id = args.id
+
+    targetPath = f'./rotated_{student_id}' # !!! 目標資料夾 !!!
+
+    main(args)

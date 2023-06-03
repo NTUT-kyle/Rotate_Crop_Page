@@ -1,2 +1,4 @@
 opencv-python
 tqdm
+lpips
+torch
