@@ -52,7 +52,7 @@ def getMarkDatabase(args:ArgumentParser) -> dict:
         args.markDatabase = f'{args.myId}_markDatabase.txt'
 
     if os.path.exists(args.markDatabase):
-        with open(args.markDatabase, 'r') as f:
+        with open(args.markDatabase, 'r', encoding='UTF-8') as f:
             dataFile = f.readlines()
     else:
         return dict()
@@ -71,7 +71,7 @@ def dumpMarkDatabase(args:ArgumentParser, markDatabase:dict) -> None:
     '''
     Dump markDatabase to txt file
     '''
-    with open(args.markDatabase, 'w') as f:
+    with open(args.markDatabase, 'w', encoding='UTF-8') as f:
         for targetID in markDatabase:
             MSE = markDatabase[targetID]['MSE']
             SSIM = markDatabase[targetID]['SSIM']
