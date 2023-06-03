@@ -71,7 +71,7 @@ def dumpMarkDatabase(args:ArgumentParser, markDatabase:dict) -> None:
     '''
     Dump markDatabase to txt file
     '''
-    with open(args.markDatabase, 'w', encoding='UTF-8') as f:
+    with open(args.markDatabase, 'w') as f:
         for targetID in markDatabase:
             MSE = markDatabase[targetID]['MSE']
             SSIM = markDatabase[targetID]['SSIM']
@@ -176,7 +176,7 @@ if __name__ == '__main__':
 
     if args.crossCompare:
         # 幫全名單的人計算他們與自己最相似的字體
-        with open(args.crossCompare, 'r') as f:
+        with open(args.crossCompare, 'r', encoding='UTF-8') as f:
             targets = f.readlines()
 
         for target in targets:
