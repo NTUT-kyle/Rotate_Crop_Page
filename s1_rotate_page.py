@@ -8,6 +8,18 @@ import os
 import cv2
 import numpy as np
 from tqdm import tqdm
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Step 1 rotate scan page')
+    
+    parser.add_argument('--id',
+                        help='To rotated page from student id folder',
+                        default="111C52032",
+                        type=str)
+
+    args = parser.parse_args()
+    return args
 
 def zoom_qrcode_finder(image, qrcode, thresh=64):
     """放大處理QRCode位置，二值化處理並搜尋 QR Code 位置
@@ -167,12 +179,15 @@ def rotate_img(file_path, now_page) -> bool:
     return True
 
 if __name__ == '__main__':
-    target_path = './your_target_dir' # !!! 目標資料夾 !!!
-    result_path = 'rotated' # 存放資料夾
+    args = parse_args()
+    student_id = args.id
+
+    target_path = f'./{student_id}' # !!! 目標資料夾 !!!
+    result_path = f'rotated_{student_id}' # 存放資料夾
     if not os.path.exists(result_path):
         os.makedirs(result_path)
     
-    print("Handling page rotation...")
+    print(f"Handling page rotation, student id = {student_id}")
     
     errorList = []
     allFileList = os.listdir(target_path)
