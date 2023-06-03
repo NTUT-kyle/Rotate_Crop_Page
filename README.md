@@ -107,7 +107,11 @@ pip install -r requirement.txt
         ```
     - 對比你與很多同學
         ```
-        python s3_compare.py --myId <你的學號> --targetId <他們的學號.txt>
+        python s3_compare.py --myId <你的學號> --targetId <多人學號文件.txt>
+        ```
+    - 交叉比對（計算`多人學號文件`中全部人對彼此的相似度）
+        ```
+        python s3_compare.py --crossCompare <多人學號文件.txt>
         ```
     - 多人學號文件格式
         ```
