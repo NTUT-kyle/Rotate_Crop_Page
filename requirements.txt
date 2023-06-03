@@ -2,3 +2,4 @@ opencv-python
 tqdm
 lpips
 torch
+scikit-image
