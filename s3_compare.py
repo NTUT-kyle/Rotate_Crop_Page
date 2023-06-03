@@ -12,7 +12,7 @@ from tqdm import tqdm
 from argparse import ArgumentParser
 
 def parse_args():
-    parser = ArgumentParser(description='Step 1 rotate scan page')
+    parser = ArgumentParser(description='Step 3 compare your handwriting with others')
     
     parser.add_argument('--myId',
                         help='Your student id',
@@ -150,34 +150,40 @@ def main(args):
     # 載入預訓練的LPIPS模型
     loss_fn = lpips.LPIPS(net='alex').to(device)
 
-    # 讀取全班名單（學號）
-    with open('myLabID.txt', 'r') as f:
-        targets = f.readlines()
+    if args.targetId.endswith('.txt'):
+        # 讀取目標名單（學號）
+        with open(args.targetId, 'r') as f:
+            targets = f.readlines()
+    else:
+        targets = [args.targetId]
 
     # 逐一計算與“args.myId"的相似度
     for target in targets:
-        targetID, _ = target.strip().split()
+        targetID = target.strip().split()[0]
+        # 跳過已經計算過的和自己
         if (args.skipExist and targetID in markDatabase) \
             or targetID == args.myId:
             continue
         compareWithTarget(args, targetID, word_list, markDatabase, loss_fn, device)
+        # 保存結果
+        dumpMarkDatabase(args, markDatabase)
 
-    # 輸出成績並保存結果
+    # 輸出成績
     printMostSimilar(args, markDatabase)
-    dumpMarkDatabase(args, markDatabase)
 
 if __name__ == '__main__':
     args = parse_args()
 
     if args.crossCompare:
         # 幫全名單的人計算他們與自己最相似的字體
-        with open('myLabID.txt', 'r') as f:
+        with open(args.crossCompare, 'r') as f:
             targets = f.readlines()
 
         for target in targets:
             targetID, _ = target.strip().split()
             args.myId = targetID
             args.markDatabase = f'{args.myId}_markDatabase.txt'
+            args.targetId = args.crossCompare
             main(args)
     else:
         main(args)

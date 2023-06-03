@@ -14,7 +14,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Step 1 rotate scan page')
     
     parser.add_argument('--id',
-                        help='To rotated student id',
+                        help='To rotated page from student id folder',
                         default="111C52032",
                         type=str)
 

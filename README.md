@@ -53,7 +53,7 @@ pip install -r requirement.txt
     python s1_rotate_page.py --id <你的學號>
    ```
    - 程式就會讀取你學號路徑底下的全部JPG，並進行**旋轉調整**，最後保存到 `rotated_<你的學號>` 路徑底下
-   - 學好當然也可以用其他字串取代
+   - 學號當然也可以用其他字串取代
 
 結束後，如果出現 `The following is the wrong file` 的話，照以下步驟手動修復：
 

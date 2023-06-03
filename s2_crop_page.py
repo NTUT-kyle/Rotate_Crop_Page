@@ -18,7 +18,7 @@ import time
 import argparse
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Step 1 rotate scan page')
+    parser = argparse.ArgumentParser(description='Step 2 crop page')
     
     parser.add_argument('--id',
                         help='To rotated student id',
@@ -361,7 +361,7 @@ def main(args):
     scales = [SCALE] * len(filePaths)
     COLOR_BOOSTs = [COLOR_BOOST] * len(filePaths)
 
-    # 監聽輸出資-料夾，顯示進度條
+    # 監聽輸出資料夾，顯示進度條
     start_unicode = (PAGE_START - 1) * 100
     end_unicode = min(PAGE_END * 100, 13758)
     total_available_code = len(unicode[start_unicode : end_unicode]) - unicode[start_unicode : end_unicode].count('123')
