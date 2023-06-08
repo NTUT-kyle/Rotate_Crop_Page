@@ -27,6 +27,7 @@ def zoom_qrcode_finder(image, qrcode, thresh=64):
     Keyword arguments: 
         image -- 要搜尋的圖片
     Return:
+        now_page -- 檔案頁面
         bbox -- QR Code 邊界
         None -- 找不到 QR Code
     """
@@ -38,12 +39,12 @@ def zoom_qrcode_finder(image, qrcode, thresh=64):
     crop_img = image[h - crop_h : h, w - crop_w : w]
     zoom_img = cv2.resize(crop_img, (w, h))
     zoom_img = cv2.threshold(zoom_img, thresh, 255, cv2.THRESH_BINARY)[1]
-    _, bbox, _ = qrcode.detectAndDecode(zoom_img)
+    now_page, bbox, _ = qrcode.detectAndDecode(zoom_img)
 
     if bbox is not None:
         bbox[:, :, 0] = bbox[:, :, 0] * scale_w + w - crop_w
         bbox[:, :, 1] = bbox[:, :, 1] * scale_h + h - crop_h
-        return bbox
+        return now_page, bbox
 
     elif thresh == 192:
         return None
@@ -56,15 +57,16 @@ def qrcode_finder(image):
     Keyword arguments: 
         image -- 要搜尋的圖片
     Return:
+        now_page -- 檔案頁面
         bbox -- QR Code 邊界
         None -- 找不到 QR Code
     """
     qrcode = cv2.QRCodeDetector()
-    data, bbox, rectified = qrcode.detectAndDecode(image)
+    now_page, bbox, rectified = qrcode.detectAndDecode(image)
     
     if bbox is None:
         return zoom_qrcode_finder(image, qrcode)
-    return bbox
+    return now_page, bbox
     
 def boxSize(arr):
     """獲取 bbox 的最大以及最小 X, Y
@@ -116,15 +118,14 @@ def saveImage(image, now_page):
         now_page -- 頁面 index
     """
     global result_path
-    cv2.imwrite('./{}/{}.png'.format(result_path, now_page + 1), image)
+    cv2.imwrite('./{}/{}.png'.format(result_path, now_page), image)
     
 
-def rotate_img(file_path, now_page) -> bool:
+def rotate_img(file_path) -> bool:
     """主程式，以 QR Code 旋轉稿紙
     
     Keyword arguments:
         file_path -- 檔案路徑
-        now_page -- 現在頁面 index
     Return:
         True -- 執行成功
         False -- 錯誤
@@ -134,7 +135,7 @@ def rotate_img(file_path, now_page) -> bool:
     try:
         img = cv2.imread(file_path)
     except:
-        print("\n 錯誤檔案：{}".format(now_page))
+        print("\n 錯誤檔案：{}".format(file_path))
         return False
     height, width, _ = img.shape
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -145,11 +146,11 @@ def rotate_img(file_path, now_page) -> bool:
     # QRCode detector
     right_bottom = blur[center_h : height, center_w : width]
     IsRightBottom = True
-    bbox = qrcode_finder(right_bottom)
+    now_page, bbox = qrcode_finder(right_bottom)
     # if there is no qrcode in the right bottom corner
     if bbox is None:
         left_top = blur[0 : center_h, 0 : center_w]
-        bbox = qrcode_finder(left_top)
+        now_page, bbox = qrcode_finder(left_top)
         IsRightBottom = False
     if bbox is None: return False
     
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     allFileList = os.listdir(target_path)
     for index in tqdm(range(len(allFileList))):
         filePath = target_path + "/" + allFileList[index]
-        if not rotate_img(filePath, index):
+        if not rotate_img(filePath):
             errorList.append(allFileList[index])
             
     print("Rotate successfully")

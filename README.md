@@ -74,7 +74,7 @@ pip install -r requirement.txt
     - MULTIPROCESSING # 多進程，True不能顯示切割過程，無法中途停下
     - ADJUST_CENTROID # 文字重心對齊
     - SHOW # 顯示切割過程
-    - SCALE # !!! 電子檔設5，紙本設20 !!!
+    - SCALE # !!! 電子檔設5，紙本設20（切到字請調小，切到框調大） !!!
     - COLOR_BOOST # 增加對比度，適用於紙本掃描較差的圖，但會嚴重影響效率
    ```
 2. 輸入你要從哪個 Page 開始切割（不輸入 預設為 `1`）
