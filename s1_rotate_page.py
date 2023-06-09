@@ -100,8 +100,6 @@ def get_skew_angle(qrcode_img) -> float:
 
     coords = np.column_stack(np.where(thresh > 0))
     angle = cv2.minAreaRect(coords)[-1] # (0, 90]
-    
-    # print(angle, end=" ")
         
     if angle > 45:
         angle = 90 - angle
@@ -121,7 +119,7 @@ def saveImage(image, now_page):
     cv2.imwrite('./{}/{}.png'.format(result_path, now_page), image)
     
 
-def rotate_img(file_path) -> bool:
+def rotate_img(file_path, index) -> bool:
     """主程式，以 QR Code 旋轉稿紙
     
     Keyword arguments:
@@ -153,6 +151,10 @@ def rotate_img(file_path) -> bool:
         now_page, bbox = qrcode_finder(left_top)
         IsRightBottom = False
     if bbox is None: return False
+    if now_page == '':
+        now_page = str(index + 1)
+        print(f'\nGet information from QR code failed, replace to "{now_page}.png", file path: {file_path}')
+        print(f'Warning: It may contained page error, please check it manually')
     
     # Calculate qrcode angle
     box = boxSize(bbox[0])
@@ -194,7 +196,7 @@ if __name__ == '__main__':
     allFileList = os.listdir(target_path)
     for index in tqdm(range(len(allFileList))):
         filePath = target_path + "/" + allFileList[index]
-        if not rotate_img(filePath):
+        if not rotate_img(filePath, index):
             errorList.append(allFileList[index])
             
     print("Rotate successfully")
